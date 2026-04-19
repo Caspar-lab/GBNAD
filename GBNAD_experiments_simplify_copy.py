@@ -8,7 +8,6 @@ from Nbr_MGNR import *
 from NNSearch import *
 
 warnings.filterwarnings('ignore')
-# si
 class GB1:
     def __init__(self, data,
                  index):  # Data is labeled data, the penultimate column is label, and the last column is index
@@ -38,7 +37,6 @@ def gaussian_kernel(Dis, sigma):
     Dis = Dis ** 2
     return np.exp(-Dis / (sigma))
 
-# def GBNAD_experiment(X, k, alpha, delta):
 def GBNAD_experiment(X, k, alpha):
     dataPointAnomalyScore = np.zeros(len(X))
 
@@ -83,29 +81,9 @@ def GBNAD_experiment(X, k, alpha):
     nbGroup = NNtool.get_nb_group(nn, rnn)
     set1_sizes = np.array([len(nbGroup[i]) for i in range(len(nbGroup))])
     set1_sizes = scaler.fit_transform(set1_sizes.reshape(-1, 1)).reshape(-1)
-    # set1_sizes = set1_sizes/np.max(set1_sizes)
-    # AUC = 0.654
-    # normalized_set_sizes = set1_sizes
-    # AUC: 0.678
-    # normalized_set_sizes = set1_sizes * density
-    # AUC:0.647
-    # normalized_set_sizes = density
-    # AUC: 0.697
-    # normalized_set_sizes = set1_sizes + density
-    # normalized_set_sizes = 0.1 * set1_sizes + fuzzy_ratio
-    # AUC:0.756
     normalized_set_sizes = np.power(set1_sizes * density, 1/2) * fuzzy_ratio
-    # AUC:0.793
-    # k[2,60] alpha[0,1] AUC:0.862
-    # normalized_set_sizes = np.power(set1_sizes + density, 1/2) * fuzzy_ratio
-    # k[2,60] alpha[0,1] AUC:0.860
-    # normalized_set_sizes = np.power(set1_sizes + density, 1) * fuzzy_ratio
     normalized_set_sizes = scaler.fit_transform(normalized_set_sizes.reshape(-1, 1)).reshape(-1)
     normalized_set_sizes = 1 - normalized_set_sizes
-
-    # normalized_set_sizes = 1 / set1_sizes
-    # normalized_set_sizes = scaler.fit_transform(normalized_set_sizes.reshape(-1, 1)).reshape(-1)
-    # fusion_nbG_propotion = normalized_set_sizes
 
     fuzzy_score = normalized_set_sizes
     force_scores = GBNAD.getDataPointAnomalyScore(centers, gb_list, dis_index, k, index, X,
@@ -113,10 +91,8 @@ def GBNAD_experiment(X, k, alpha):
     IsNan = np.isnan(force_scores).any()
     if IsNan:
         print('AnomalyScore has nan')
-
+    # 融合放在getDataPointAnomalyScore中
     score1 = scaler.fit_transform(force_scores.reshape(-1, 1)).reshape(-1)
-    # score2 = scaler.fit_transform(force_scores.reshape(-1, 1)).reshape(-1)
-    # Anomaly_score = score1 * alpha + score2 * (1-alpha)
     return score1
 
 if __name__ == '__main__':
@@ -126,15 +102,7 @@ if __name__ == '__main__':
     dataname_path = os.path.join(dir_path, 'datasets\\all_datalists_outlier.mat')  # Categorical Mixed Numerical
     datalists = io.loadmat(dataname_path)['datalists']
 
-    # no_data_ID = [8, 9, 26, 32, 34, 39, 47, 48, 51] + list(range(62, 68))
-    no_data_ID = [8, 9, 25, 26, 32, 34, 38, 39, 47, 48, 51] + list(range(62, 68))
-    # 生成27-83的所有数字
-    full_range = range(27, 85)  # 注意：range右边界不包含，所以84才能包含83
-    # 过滤掉no_data中的数字
-    result = [num-1 for num in full_range if num not in no_data_ID]
-    # data_ID = [29, 31, 33, 35, 36, 40, 42, 46, 49, 56, 57, 60, 68, 69, 71, 73, 74, 77, 82, 83]
-    data_ID = [29, 31, 33, 35, 36, 40, 42, 46, 49, 56, 57, 60, 69, 71, 73, 74, 82, 83]
-    # data_ID = [33]
+    data_ID = [33]
 
     for data_i in data_ID:
         print('data_i=', data_i)
@@ -143,12 +111,6 @@ if __name__ == '__main__':
         if data_i in no_data_ID:
             print('Dataset:' + data_name + ' 运行不出来！！！')
             continue
-        add_folder = os.path.join(
-            os.path.join(dir_path, 'Experiment_Results\\' + algorithm_name + '_results\\' + data_name))
-        # if os.path.exists(add_folder):
-        #     print(data_name + " 已经有实验结果！！！")
-        #     continue
-        # os.mkdir(add_folder)
 
         data_path = os.path.join(dir_path, 'datasets\\' + data_name + '.mat')
         trandata = io.loadmat(data_path)['trandata']
@@ -173,45 +135,22 @@ if __name__ == '__main__':
         opt_delta = 0
         opt_alpha = 0
 
-        # for delta in np.arange(0.1, 1.1, 0.1):
         for k in range(2, 60):
-        # for k in [30]:
-        #     for alpha in np.arange(0, 1.05, 0.05):
-            for alpha in [1.0]:
-        # for delta in np.arange(5, 105, 5):
-                delta = 5
-                # out_scores = GBNAD_experiment(X, k, alpha, delta)
+            for alpha in np.arange(0, 1.04, 0.05):
                 out_scores = GBNAD_experiment(X, k, alpha)
-                # results_name1 = data_name + '_' + algorithm_name + '_k-' + str(k) + '_alpha-' + str(alpha) + '.mat'
                 results_name1 = data_name + '_' + algorithm_name + '_delta-' + str(delta) + '.mat'
                 AUC = roc_auc_score(labels, out_scores)
-                save_path = os.path.join(add_folder, results_name1)
-                # io.savemat(save_path, {'out_scores': out_scores})
                 print(f"k:{k}")
                 print(f"alpha:{alpha}")
                 print(f"AUC:{AUC}")
-                # print(f"delta:{delta}")
                 if AUC > opt_AUC:
                     opt_AUC = AUC
                     opt_out_scores = out_scores
                     opt_k = k
                     opt_alpha = alpha
-                    # opt_delta = delta
         print('opt_AUC=', opt_AUC)
-        # print('opt_delta=', opt_delta)
-        # print('opt_k=', opt_k)
         print('opt_alpha=', opt_alpha)
-        T_temp = np.zeros((len(opt_out_scores), 1))
-        T_temp[0] = opt_delta
-        T_temp[1] = opt_AUC
-        T_temp[2] = opt_T
-        # T_temp[3] = opt_alpha
-        opt_out_scores = opt_out_scores.reshape(-1, 1)
-        # 添加一列实验记录T_temp
-        opt_out_scores = np.column_stack((opt_out_scores, T_temp))
-        results_name2 = data_name + '_' + algorithm_name + '.mat'
-        save_path = os.path.join(add_folder, results_name2)
-        # io.savemat(save_path, {'opt_out_scores': opt_out_scores})
+        print('opt_k=', opt_k)
 
 
 
